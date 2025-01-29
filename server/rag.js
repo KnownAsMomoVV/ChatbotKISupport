@@ -62,7 +62,7 @@ class IntentRecognizer {
 
   async detectIntent(query, threshold = 0.85) {
     const queryEmbedding = await getEmbedding(query);
-    let bestMatch = { name: null, score: -1 }; // Corrected here
+    let bestMatch = { name: null, score: -1 };
 
     for (const [name, intent] of this.intents.entries()) {
       const score = this.cosineSimilarity(queryEmbedding, intent.embedding);
@@ -77,8 +77,19 @@ class IntentRecognizer {
   async generateDynamicAnswer(intent, contextDocs, query) {
     const context = contextDocs.map(d => d.pageContent).join('\n');
     
-    const prompt = `Based on the intent "${intent.name}" (confidence: ${intent.score.toFixed(2)}) 
-    and the following context:\n${context}\n\nAnswer this question: ${query}`;
+    const prompt = `[STRICT FORMATTING RULES]
+- Answer directly without greetings
+- Use ONLY "•" for bullet points
+- Max 3 bullets per section
+- Max 200 characters per message part
+- NEVER use markdown or links
+- Separate sections with blank lines
+
+Context: ${context}
+
+Question: ${query}
+
+Concise, split answer:`;
 
     const response = await fetch('http://localhost:11434/api/generate', {
       method: 'POST',
@@ -86,12 +97,68 @@ class IntentRecognizer {
       body: JSON.stringify({
         model: 'llama2',
         prompt: prompt,
-        stream: false
+        stream: false,
+        options: {
+          max_tokens: 1200,
+          temperature: 0.3
+        }
       })
     });
 
+    if (!response.ok) {
+      throw new Error(`LLM API error: ${response.status} - ${await response.text()}`);
+    }
+
     const data = await response.json();
-    return data.response;
+    return this.processResponse(data.response);
+  }
+
+  processResponse(text) {
+    const cleaned = this.cleanResponse(text);
+    return this.splitIntoMessages(cleaned);
+  }
+
+  cleanResponse(text) {
+    return text
+      .replace(/[*-]>\s?/g, '• ')   // Normalize bullets
+      .replace(/\[\d+\]/g, '')      // Remove citations
+      .replace(/\(http\S+\)/g, '')  // Remove URLs
+      .replace(/\n{3,}/g, '\n\n')   // Limit newlines
+      .replace(/^\s*[\r\n]/gm, '')  // Remove empty lines
+      .trim();
+  }
+
+  splitIntoMessages(text) {
+    const MAX_LENGTH = 200;
+    const messages = [];
+    let currentMessage = '';
+    
+    const sections = text.split(/(?:\n\s*){2,}/);
+    
+    for (const section of sections) {
+      const lines = section.split('\n');
+      
+      for (const line of lines) {
+        if ((currentMessage + line).length > MAX_LENGTH) {
+          messages.push(currentMessage.trim());
+          currentMessage = '';
+        }
+        currentMessage += line + '\n';
+        
+        // Split at natural breaks
+        if (line.startsWith('•') && currentMessage.length > MAX_LENGTH/2) {
+          messages.push(currentMessage.trim());
+          currentMessage = '';
+        }
+      }
+      
+      if (currentMessage.length > 0) {
+        messages.push(currentMessage.trim());
+        currentMessage = '';
+      }
+    }
+    
+    return messages.filter(m => m.length > 0);
   }
 
   cosineSimilarity(a, b) {
@@ -112,7 +179,10 @@ async function getEmbedding(text) {
     })
   });
   
-  if (!response.ok) throw new Error(`Embedding error: ${response.statusText}`);
+  if (!response.ok) {
+    throw new Error(`Embedding error: ${response.status} - ${await response.text()}`);
+  }
+
   const data = await response.json();
   return data.embedding;
 }
@@ -144,7 +214,8 @@ async function loadFile(filePath) {
     
     if (ext === '.pdf') {
       const dataBuffer = await fs.readFile(filePath);
-      ({ text } = await pdfParse(dataBuffer));
+      const pdfData = await pdfParse(dataBuffer);
+      text = pdfData.text;
     } else if (ext === '.txt' || ext === '.md') {
       text = await fs.readFile(filePath, 'utf-8');
     } else {
@@ -170,22 +241,6 @@ async function setupVectorStore() {
   const vectorStore = new SimpleVectorStore();
   const intentRecognizer = new IntentRecognizer();
   const knowledgePath = path.join(__dirname, '..', 'knowledge');
-
-  // Add predefined intents
-  await intentRecognizer.addIntent(
-    'password_reset',
-    [
-      "How to reset password?",
-      "Change password instructions",
-      "Forgot password recovery",
-      "Password reset procedure",
-      "Update my password",
-      "Need to change my login",
-      "How do I reset my pass?",
-      "Password recovery help"
-    ],
-    "Go to XIEXIE > BING CHILLING > PASSWORTO"
-  );
 
   try {
     const files = await fs.readdir(knowledgePath);

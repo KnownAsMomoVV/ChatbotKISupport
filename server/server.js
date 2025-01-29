@@ -81,69 +81,88 @@ initializeSystem().catch(error => {
 });
 
 app.post('/ask', async (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.setHeader('Transfer-Encoding', 'chunked');
+
   if (!vectorStore || !intentRecognizer) {
-    return res.status(503).json({ error: "System initializing..." });
+      res.write(JSON.stringify({ message: "System initializing..." }) + "\n");
+      return res.end();
   }
 
   const { question } = req.body;
   if (!question) {
-    return res.status(400).json({ error: "Question required" });
+      res.write(JSON.stringify({ message: "Error: Question required" }) + "\n");
+      return res.end();
   }
 
   try {
-    // 1. Intent Detection with Varied Responses
-    const intent = await intentRecognizer.detectIntent(question);
-    if (intent) {
-      const intentDetails = intentRecognizer.intents.get(intent.name);
-      const dynamicResponse = await generateDynamicAnswer(
-        `System answer: ${intentDetails.answer}`,
-        question,
-        AI_PERSONA
-      );
-      
-      return res.json({
-        answer: dynamicResponse,
-        sources: ["System Knowledge"],
-        intent: intent.name
-      });
-    }
+      let responseSent = false;
 
-    // 2. Document-Based Response Generation
-    const queryEmbedding = await getEmbedding(question);
-    const results = vectorStore.similaritySearch(queryEmbedding, 5);
-    
-    if (results.length === 0) {
-      return res.json({
-        answer: await generateDynamicAnswer(
-          "No relevant information found",
-          question,
-          AI_PERSONA
-        ),
-        sources: []
-      });
-    }
+      // Intent-based response
+      const intent = await intentRecognizer.detectIntent(question);
+      if (intent) {
+          const intentDetails = intentRecognizer.intents.get(intent.name);
+          const intentAnswer = await generateDynamicAnswer(
+              `System answer: ${intentDetails.answer}`,
+              question,
+              AI_PERSONA
+          );
 
-    // 3. Contextual Response Crafting
-    const context = results
-      .map(({ doc }, i) => `SOURCE ${i+1} (${doc.metadata.source}):\n${doc.pageContent}`)
-      .join('\n\n');
+          const compactMessages = chunkLines(intentAnswer.split("\n"), 4);
+          compactMessages.forEach(message => {
+              res.write(JSON.stringify({ message }) + "\n");
+          });
 
-    const finalAnswer = await generateDynamicAnswer(context, question, AI_PERSONA);
-    
-    res.json({
-      answer: finalAnswer,
-      sources: [...new Set(results.map(({ doc }) => doc.metadata.source))],
-      intent: null
-    });
+          responseSent = true;
+      }
 
+      // Database-based response
+      if (!responseSent) {
+          const queryEmbedding = await getEmbedding(question);
+          const results = vectorStore.similaritySearch(queryEmbedding, 5);
+
+          if (results.length > 0) {
+              const context = results
+                  .map(({ doc }, i) => `SOURCE ${i + 1} (${doc.metadata.source}):\n${doc.pageContent}`)
+                  .join('\n\n');
+
+              const dbAnswer = await generateDynamicAnswer(context, question, AI_PERSONA);
+
+              const compactMessages = chunkLines(dbAnswer.split("\n"), 4);
+              compactMessages.forEach(message => {
+                  res.write(JSON.stringify({ message }) + "\n");
+              });
+
+              responseSent = true;
+          }
+      }
+
+      // Fallback response
+      if (!responseSent) {
+          const fallbackAnswer = await generateDynamicAnswer("I couldn’t find a match, but here’s what I think:", question, AI_PERSONA);
+
+          const compactMessages = chunkLines(fallbackAnswer.split("\n"), 4);
+          compactMessages.forEach(message => {
+              res.write(JSON.stringify({ message }) + "\n");
+          });
+      }
+
+      res.end();
   } catch (error) {
-    console.error('Error:', error);
-    res.status(500).json({ 
-      answer: "⚓ Smooth sailing turned rough! Let's try that again...",
-      error: error.message 
-    });
+      console.error('💥 ERROR:', error);
+      res.write(JSON.stringify({ message: "⚓ An unexpected error occurred. Please try again." }) + "\n");
+      res.end();
   }
 });
+
+// Helper function: group lines into chunks of N lines
+function chunkLines(lines, maxLines) {
+  const chunks = [];
+  for (let i = 0; i < lines.length; i += maxLines) {
+      chunks.push(lines.slice(i, i + maxLines).join("\n"));
+  }
+  return chunks;
+}
 
 // AI Response Generator with Safety Checks
 async function generateDynamicAnswer(context, question, persona) {
@@ -151,15 +170,18 @@ async function generateDynamicAnswer(context, question, persona) {
     // Safeguard against undefined guidelines
     const safePersona = {
       name: persona.name || "Assistant",
-      style: persona.style || "Helpful AI",
-      responseGuidelines: persona.responseGuidelines || ["Be helpful and concise"]
+      style: persona.style || "Helpful technical support",
+      responseGuidelines: persona.responseGuidelines || ["Provide clear, concise answers"]
     };
 
     const guidelines = (safePersona.responseGuidelines || [])
       .map((g, i) => `${i+1}. ${g}`)
       .join('\n') || '1. Provide the best possible answer';
 
-    const responsePrompt = `[INST] You are ${safePersona.name}, ${safePersona.style}.
+    // Removed 'Adds personality' from the request. 
+    // Also explicitly forbid greetings, emojis, personal commentary:
+// Updated responsePrompt in generateDynamicAnswer
+const responsePrompt = `[INST] You are ${safePersona.name}, ${safePersona.style}.
 Guidelines:
 ${guidelines}
 
@@ -169,10 +191,29 @@ ${context}
 User Question: ${question}
 
 Create a helpful response that:
-- Uses information EXACTLY as shown in context
-- Varies structure from previous answers
-- Adds personality without being repetitive
-- Formats differently than last time
+- STARTS DIRECTLY WITH THE ANSWER (no greetings)
+- Uses ONLY these formatting elements:
+  • Bullet points starting with "•"
+  • Numbered lists when giving steps
+  • Paragraph breaks with blank lines
+- Keep paragraphs under 3 lines
+- NEVER use markdown, emojis, or special formatting
+- If using bullets/numbering:
+  - Put each item on its own line
+  - Leave a blank line after the list
+
+Example GOOD format:
+To resolve the issue:
+• First do X
+• Then perform Y
+• Finally complete Z
+
+For additional help:
+1. Open settings
+2. Navigate to section A
+3. Enable option B
+
+${context ? 'Use context where relevant' : ''}
 [/INST]`;
 
     const response = await fetch('http://localhost:11434/api/generate', {
@@ -182,13 +223,16 @@ Create a helpful response that:
         model: 'mistral',
         prompt: responsePrompt,
         stream: false,
-        options: {
-          temperature: 0.8,
-          num_predict: 150,
-          repeat_penalty: 1.2,
-          top_k: 40,
-          seed: Date.now()
-        }
+options: {
+  temperature: 0.7,  // Slightly higher for better formatting
+  num_predict: 300,
+  repeat_penalty: 1.5,  // Reduce repetition
+  top_k: 50,
+  top_p: 0.9,
+  mirostat: 2,  // Enable mirostat for better coherence
+  mirostat_tau: 5.0,
+  mirostat_eta: 0.1
+}
       })
     });
 
@@ -198,15 +242,37 @@ Create a helpful response that:
     }
 
     const data = await response.json();
-    
     if (!data?.response) {
       throw new Error('Invalid response format from Ollama');
     }
 
-    return data.response
+    let finalText = data.response
+      // Remove the [INST] wrappers if they appear
       .replace(/\[INST\].*\[\/INST\]/gs, '')
-      .trim()
-      .replace(/\n+/g, '\n');
+      .trim();
+
+    // 1) Remove lines that begin with typical greetings
+    finalText = finalText.replace(/^(hello|hi|hey|greetings)[^\n]*\n?/gim, '');
+
+    // 2) Remove lines starting with "It seems like" or "It looks like"
+    finalText = finalText.replace(/^(it\s+seems\s+like|it\s+looks\s+like).*\n?/gim, '');
+
+    // 3) Remove common emojis (quick approach using a broad range)
+    // This removes typical emojis (Unicode range 1F300–1FAFF)
+    finalText = finalText.replace(/[\u{1F300}-\u{1FAFF}]/gu, '');
+    
+    finalText = finalText
+    .replace(/([*\-➢])/g, '•')  // Standardize bullets
+    .replace(/(•\s.*?)(\n+)(•)/g, '$1\n$3')  // Ensure single newline between list items
+    .replace(/(•.*\n)([^\n•])/g, '$1\n\n$2')  // Ensure extra spacing after bullet lists
+    .replace(/\n{3,}/g, '\n\n')  // Remove excessive line breaks
+    .replace(/(.{120,}?)\s/g, '$1\n')  // Auto-wrap long paragraphs at ~120 characters
+    .trim();
+  
+    // 4) Optionally remove exclamation points if you want a more neutral tone
+    // finalText = finalText.replace(/!/g, '');
+
+    return finalText;
 
   } catch (error) {
     console.error('Generation error:', error);

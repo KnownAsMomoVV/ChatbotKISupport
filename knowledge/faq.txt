@@ -1,4 +1,133 @@
-Q: How to reset password?
-A: Go to XIEXIE > BING CHILLING > PASSWORTO
+# Hanseatic Bank Customer Support FAQ  
+*Last Updated: [DATE]*  
 
-Go to Settings > Security > Reset Password
+---
+
+## 🏦 **General Company Information**  
+
+### Q: What is Hanseatic Bank?  
+**A:** Founded in 1969 in Hamburg, Hanseatic Bank is a digital-first consumer finance institution offering credit cards, personal loans, savings products, and real estate financing. We are part of the Société Générale Group (75%) and Otto Group (25%).  
+
+### Q: Do you have physical branches?  
+**A:** Since 2020, we’ve centralized operations in Hamburg. Most services are accessible via our [banking app](https://www.hanseaticbank.de/) or website. For in-person support, visit:  
+**Hanseatic Bank Headquarters**  
+ABC-Straße 19, 20354 Hamburg, Germany  
+
+---
+
+## 📱 **Banking App Support**  
+
+### Q: What features does the Hanseatic Bank app include?  
+**A:**  
+- Real-time credit card management (adjust repayment rates, block cards)  
+- Loan applications with instant approval decisions  
+- Secure chat with customer support  
+- Biometric login (Face ID, fingerprint)  
+- Otto Group financing integrations (e.g., online retail purchases)  
+
+### Q: How do I troubleshoot login issues?  
+**Step-by-Step Guide:**  
+1. Ensure your app is updated to the latest version.  
+2. Reset your password using the “Forgot Password” link.  
+3. Clear the app cache (*Settings > Storage > Clear Cache*).  
+4. If problems persist, contact support via [web chat](https://www.hanseaticbank.de/kontakt).  
+
+### Q: Can I customize app notifications?  
+**A:** Yes! Go to *Profile > Notification Settings* to enable alerts for:  
+- Transaction confirmations  
+- Payment due dates  
+- Security updates  
+
+---
+
+## 💳 **Credit Card Support**  
+
+### Q: What’s the difference between GenialCard and GoldCard?  
+| Feature               | GenialCard          | GoldCard            |  
+|-----------------------|---------------------|---------------------|  
+| Annual Fee            | €0                  | €49                 |  
+| Rewards               | 0.5% cashback       | 1% cashback + travel insurance |  
+| Foreign Transaction Fee | 1.5%               | 0%                 |  
+
+### Q: How do I increase my credit limit?  
+**A:** Submit a request via the app:  
+1. Navigate to *Cards > Manage > Credit Limit Increase*.  
+2. Upload proof of income (PDF/JPEG).  
+3. Approval typically takes 2 business days.  
+
+---
+
+## 🔒 **Security & Fraud Prevention**  
+
+### Q: How do I recognize phishing attempts?  
+**Red Flags:**  
+- Emails/SMS asking for your PIN or CVV.  
+- Links to non-`hanseaticbank.de` domains.  
+- Urgent requests to “verify your account.”  
+
+**Report Suspicious Activity:** Forward the message to [phishing@hanseaticbank.de](mailto:phishing@hanseaticbank.de).  
+
+### Q: What security features protect my account?  
+- **Two-Factor Authentication (2FA):** Mandatory for all logins.  
+- **Card Controls:** Freeze/unfreeze cards instantly in the app.  
+- **End-to-End Encryption:** All app communications are GDPR-compliant.  
+
+---
+
+## 🏠 **Loans & Financing**  
+
+### Q: What loan terms do you offer?  
+| Loan Type             | Amount Range      | Term       | APR       |  
+|-----------------------|-------------------|------------|-----------|  
+| Personal Loan         | €1,000 – €50,000  | 12-72 mo   | 3.9%–8.9% |  
+| Real Estate Refinance | €50,000 – €500k   | 10-25 yrs  | Custom    |  
+
+### Q: Why was my loan application rejected?  
+**Common Reasons:**  
+- Insufficient credit score (min. 650 required).  
+- Missing income documentation.  
+- Existing debt-to-income ratio above 40%.  
+
+**Next Steps:** Reapply after 90 days or contact support for a detailed review.  
+
+---
+
+## ⚠️ **Troubleshooting Common Issues**  
+
+### Q: The app shows incorrect account balances.  
+**Fix:**  
+1. Pull down to refresh the screen.  
+2. Check for pending transactions under *Activity*.  
+3. If unresolved, clear app data (*Settings > Apps > Hanseatic Bank > Clear Data*).  
+
+### Q: I can’t receive SMS verification codes.  
+**Solutions:**  
+- Ensure your phone number is updated in *Profile > Contact Details*.  
+- Disable any third-party SMS blockers.  
+- Request a voice call verification instead.  
+
+---
+
+## 📞 **Contact & Escalation**  
+
+### Urgent Support Channels:  
+| Issue Type            | Contact Method                     | Hours               |  
+|-----------------------|------------------------------------|---------------------|  
+| Lost/Stolen Card      | Call **+49 40 333 99-0**          | 24/7                |  
+| Fraud Alert           | In-app chat (Priority Queue)      | 6 AM – 10 PM CET    |  
+| Technical Bugs        | Email support@hanseaticbank.de     | Response in 24 hrs  |  
+
+---
+
+## 🔄 **Recent Updates**  
+- **2023:** Integration with Crédit Agricole systems (pending regulatory approval).  
+- **2024 Q2:** Planned rollout of joint accounts in the app.  
+
+*For the latest news, visit [Hanseatic Bank Updates](https://www.hanseaticbank.de/neuigkeiten).*  
+
+--- 
+
+> **Note for AI Agent:**  
+> - Always link to [official terms](https://www.hanseaticbank.de/agb) for legal queries.  
+> - Avoid speculative answers about unannounced products.  
+> - Escalate unresolved complaints to `support-tier2@hanseaticbank.de`.  
